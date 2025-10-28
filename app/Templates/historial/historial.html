@@ -1,0 +1,195 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Historial de Diagnósticos{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="page-header">
+        <h1>Historial de Diagnósticos</h1>
+        <p class="text-muted">Consulta todos tus diagnósticos anteriores</p>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            {% if historiales %}
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Miniatura</th>
+                            <th>Fecha</th>
+                            <th>Hora</th>
+                            <th>Diagnóstico Principal</th>
+                            <th>Diagnóstico Secundario</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for historial in historiales %}
+                        <tr>
+                            <td>
+                                {% if historial.thumb_img %}
+                                    <img src="{{ historial.thumb_img }}" alt="Miniatura" class="thumbnail-img"/>
+                                {% else %}
+                                    <div class="no-image">Sin imagen</div>
+                                {% endif %}
+                            </td>
+                            <td>{{ historial.fecha.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ historial.hora.strftime('%H:%M') }}</td>
+                            <td>
+                                <span class="diagnosis-badge {% if 'benigno' in historial.diagnostico.lower() %}diagnosis-benign{% else %}diagnosis-malignant{% endif %}">
+                                    {{ historial.diagnostico }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="diagnosis-badge {% if 'benigno' in historial.diagnostico_2.lower() %}diagnosis-benign{% else %}diagnosis-malignant{% endif %}">
+                                    {{ historial.diagnostico_2 }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('historial.detalle_historial', id_consulta=historial.id_consulta) }}" class="btn btn-primary btn-sm">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                    </svg>
+                                    Ver Detalle
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                No hay diagnósticos registrados para mostrar.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.page-header h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 0.5rem;
+}
+
+.page-header .text-muted {
+    color: #666;
+    font-size: 0.95rem;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table thead {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.data-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.data-table tbody tr {
+    border-bottom: 1px solid #e9ecef;
+    transition: background-color 0.2s;
+}
+
+.data-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.data-table td {
+    padding: 1rem;
+    vertical-align: middle;
+}
+
+.thumbnail-img {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+}
+
+.no-image {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    font-size: 0.75rem;
+    color: #999;
+}
+
+.diagnosis-badge {
+    display: inline-block;
+    padding: 0.375rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.diagnosis-benign {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.diagnosis-malignant {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.btn-sm {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.btn-sm svg {
+    width: 16px;
+    height: 16px;
+}
+
+.alert-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background-color: #d1ecf1;
+    border: 1px solid #bee5eb;
+    border-radius: 8px;
+    color: #0c5460;
+}
+
+.alert-info svg {
+    flex-shrink: 0;
+}
+</style>
+{% endblock %}

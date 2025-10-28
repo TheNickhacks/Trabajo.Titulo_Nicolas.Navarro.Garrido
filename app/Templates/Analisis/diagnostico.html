@@ -1,0 +1,1060 @@
+{% extends 'layouts/base.html' %}
+{% block title %}Cargar Imagen para Diagnóstico {% endblock title %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>Módulo de Diagnóstico Asistido</h1>
+        <p class="subtitle">Carga una imagen médica para obtener un análisis automatizado</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">
+                    <span class="alert-icon">
+                        {% if category == 'success' %}✓{% elif category == 'danger' %}✕{% else %}ℹ{% endif %}
+                    </span>
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <div class="card-header">
+            <h2>Cargar Imagen</h2>
+        </div>
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data" action="{{ url_for('Analisis.nuevo_analisis') }}" id="uploadForm">
+                <!-- Área de carga compacta y rectangular -->
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-content">
+                        <div class="upload-icon">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                        </div>
+                        <div class="upload-text">
+                            <h3>Arrastra y suelta tu imagen aquí o haz clic para seleccionar</h3>
+                            <p>Formatos soportados: JPG, PNG, JPEG</p>
+                        </div>
+                    </div>
+                    <input type="file" class="file-input" id="imagen" name="imagen" accept="image/*" required>
+                    <span class="file-name" id="fileName"></span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edad">Edad (opcional):</label>
+                    <input type="number" class="form-control" id="edad" name="edad" placeholder="Ej: 45">
+                </div>
+                
+                <div class="form-group">
+                    <label for="sexo">Sexo (opcional):</label>
+                    <select class="form-control" id="sexo" name="sexo">
+                        <option value="No especificado">No especificado</option>
+                        <option value="Masculino">Masculino</option>
+                        <option value="Femenino">Femenino</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="lugar_lesion">Lugar de la Lesión (opcional):</label>
+                    <input type="text" class="form-control" id="lugar_lesion" name="lugar_lesion" placeholder="Ej: Brazo, Espalda">
+                </div>
+
+                <div class="form-group">
+                    <label for="modeloIA">Seleccionar Modelo para Diagnóstico:</label>
+                    <select class="form-control" id="modeloIA" name="modeloIA">
+                        {% if modelos %}
+                            {% for modelo in modelos %}
+                                <option value="{{ modelo }}">{{ modelo }}</option>
+                            {% endfor %}
+                        {% else %}
+                            <option value="">No hay modelos disponibles</option>
+                        {% endif %}
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-block">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    Generar Diagnóstico
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {% if original_imagen or prediccion_principal or prediccion_secundaria %}
+    <div class="results-section">
+        <h2 class="section-title">Resultados del Análisis</h2>
+        
+        <!-- Layout horizontal optimizado: imagen a la izquierda, predicciones a la derecha -->
+        <div class="results-grid">
+            <!-- Columna izquierda: Imagen original y datos adicionales -->
+            {% if original_imagen %}
+            <div class="result-column">
+                <div class="result-card image-result">
+                    <div class="result-card-header">
+                        <h3>Imagen Original</h3>
+                        <span class="badge badge-info">Original</span>
+                    </div>
+                    <div class="result-card-body">
+                        <img src="{{ original_imagen }}" alt="Imagen Original" class="result-image">
+                    </div>
+                </div>
+                
+                <!-- Datos adicionales del paciente -->
+                {% if edad is not none or sexo is not none or lugar_lesion is not none or fecha_hora_prediccion is not none %}
+                <div class="result-card patient-data-card">
+                    <div class="result-card-header">
+                        <h3>Datos del Paciente</h3>
+                        <span class="badge badge-secondary">Información Complementaria</span>
+                    </div>
+                    <div class="result-card-body">
+                        <div class="data-grid">
+                            {% if edad is not none %}
+                            <div class="data-item">
+                                <span class="data-label">Edad:</span>
+                                <span class="data-value">{{ edad }} años</span>
+                            </div>
+                            {% endif %}
+                            {% if sexo is not none %}
+                            <div class="data-item">
+                                <span class="data-label">Sexo:</span>
+                                <span class="data-value">{{ sexo }}</span>
+                            </div>
+                            {% endif %}
+                            {% if lugar_lesion is not none %}
+                            <div class="data-item">
+                                <span class="data-label">Ubicación:</span>
+                                <span class="data-value">{{ lugar_lesion }}</span>
+                            </div>
+                            {% endif %}
+                            {% if fecha_hora_prediccion is not none %}
+                            <div class="data-item">
+                                <span class="data-label">Fecha de Análisis:</span>
+                                <span class="data-value">{{ fecha_hora_prediccion }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Tarjeta de umbrales ABCD mejorada visualmente -->
+                {% if abcd_umbrales %}
+                <div class="result-card">
+                    <div class="result-card-header">
+                        <h3>Análisis ABCD</h3>
+                        <span class="badge badge-warning">Configuración Técnica</span>
+                    </div>
+                    <div class="result-card-body">
+                        <div class="abcd-section">
+                            <h4 class="abcd-title">Umbrales de Activación</h4>
+                            <div class="threshold-grid">
+                                <div class="threshold-item">
+                                    <span class="threshold-letter">A</span>
+                                    <span class="threshold-name">Asimetría</span>
+                                    <span class="threshold-value">{{ "%.2f"|format(abcd_umbrales.asimetria) }}</span>
+                                </div>
+                                <div class="threshold-item">
+                                    <span class="threshold-letter">B</span>
+                                    <span class="threshold-name">Bordes</span>
+                                    <span class="threshold-value">{{ "%.2f"|format(abcd_umbrales.bordes) }}</span>
+                                </div>
+                                <div class="threshold-item">
+                                    <span class="threshold-letter">C</span>
+                                    <span class="threshold-name">Color</span>
+                                    <span class="threshold-value">{{ "%.2f"|format(abcd_umbrales.color) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="abcd-section">
+                            <h4 class="abcd-title">Criterios de Evaluación</h4>
+                            
+                            <div class="criterion-card">
+                                <div class="criterion-header">
+                                    <span class="criterion-letter">A</span>
+                                    <span class="criterion-name">Asimetría</span>
+                                    <span class="criterion-factor">Factor: ×1.3</span>
+                                </div>
+                                <p class="criterion-description">
+                                    Evalúa la simetría en dos ejes perpendiculares. Puntuación: 0 (simétrica), 1 (asimetría en un eje), 2 (asimetría en ambos ejes).
+                                </p>
+                            </div>
+                            
+                            <div class="criterion-card">
+                                <div class="criterion-header">
+                                    <span class="criterion-letter">B</span>
+                                    <span class="criterion-name">Bordes</span>
+                                    <span class="criterion-factor">Factor: ×0.1</span>
+                                </div>
+                                <p class="criterion-description">
+                                    Cuenta segmentos con bordes irregulares o abruptos. Puntuación de 0 a 8 según el número de segmentos afectados.
+                                </p>
+                            </div>
+                            
+                            <div class="criterion-card">
+                                <div class="criterion-header">
+                                    <span class="criterion-letter">C</span>
+                                    <span class="criterion-name">Color</span>
+                                    <span class="criterion-factor">Factor: ×0.5</span>
+                                </div>
+                                <p class="criterion-description">
+                                    Número de colores presentes: marrón claro/oscuro, negro, gris, azul, rojo, blanco. Puntuación de 1 a 6.
+                                </p>
+                            </div>
+                            
+                            <div class="criterion-card">
+                                <div class="criterion-header">
+                                    <span class="criterion-letter">D</span>
+                                    <span class="criterion-name">Estructuras</span>
+                                    <span class="criterion-factor">Factor: ×0.5</span>
+                                </div>
+                                <p class="criterion-description">
+                                    Patrones dermatoscópicos: red pigmentaria, puntos/glóbulos, líneas radiales, áreas sin estructura, regresión. Puntuación de 0 a 5.
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div class="info-box">
+                            <div class="info-box-header">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                                <strong>Cómo funciona</strong>
+                            </div>
+                            <p>
+                                El modelo compara las puntuaciones A, B y C contra estos umbrales para determinar el nivel de evidencia ABCD (baja/moderada/alta).
+                            </p>
+                            <p>
+                                <strong>Fórmula TDS:</strong> (A×1.3) + (B×0.1) + (C×0.5) + (D×0.5)
+                            </p>
+                            <p>
+                                <strong>Interpretación:</strong> TDS &lt; 4.75 (benigno), TDS 4.75-5.45 (sospechoso), TDS &gt; 5.45 (altamente sospechoso).
+                            </p>
+                        </div>
+                        
+                        <div class="warning-box">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                <line x1="12" y1="9" x2="12" y2="13"></line>
+                                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                            </svg>
+                            <p>
+                                <strong>Importante:</strong> Esta información justifica la activación del modelo según criterios ABCD, complementando pero no reemplazando el diagnóstico principal.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Columna derecha: Predicciones y análisis -->
+            <div class="result-column">
+                {% if prediccion_principal is not none or prediccion_secundaria is not none %}
+                <div class="result-card predictions-card">
+                    <div class="result-card-header">
+                        <h3>Predicciones</h3>
+                        <span class="badge badge-primary">Análisis Completo</span>
+                    </div>
+                    <div class="result-card-body">
+                        
+                        <!-- Predicción Principal -->
+                        {% if prediccion_principal is not none %}
+                        <div class="prediction-section">
+                            <h4 class="prediction-title">Predicción Principal</h4>
+                            {% set labels = ['Benigno', 'Maligno'] %}
+                            {% set primary_score = prediccion_principal * 100 %}
+                            {% set primary_label_index = 1 if prediccion_principal > 0.5 else 0 %}
+                            {% set primary_class = 'malignant' if primary_label_index == 1 else 'benign' %}
+                            
+                            <div class="prediction-content">
+                                <div class="prediction-score {{ primary_class }}">
+                                    {{ '%.2f' % primary_score }}%
+                                </div>
+                                <div class="prediction-label">
+                                    <span class="label-text">Diagnóstico:</span>
+                                    <span class="label-value {{ primary_class }}">{{ labels[primary_label_index] }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Predicción Dedicada -->
+                        {% if prediccion_secundaria is not none %}
+                        <div class="prediction-section prediction-dedicated">
+                            <h4 class="prediction-title">Predicción Dedicada</h4>
+                            {% set labels = ['Benigno', 'Maligno'] %}
+                            {% set secondary_score = prediccion_secundaria * 100 %}
+                            {% set secondary_label_index = 1 if prediccion_secundaria > 0.5 else 0 %}
+                            {% set secondary_class = 'malignant' if secondary_label_index == 1 else 'benign' %}
+                            
+                            <div class="prediction-content">
+                                <div class="prediction-score {{ secondary_class }}">
+                                    {{ '%.2f' % secondary_score }}%
+                                </div>
+                                <div class="prediction-label">
+                                    <span class="label-text">Diagnóstico:</span>
+                                    <span class="label-value {{ secondary_class }}">{{ labels[secondary_label_index] }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Mapa de calor Grad-CAM -->
+                {% if mapa_calor_img %}
+                <div class="result-card image-result">
+                    <div class="result-card-header">
+                        <h3>Mapa de Calor (Grad-CAM)</h3>
+                        <span class="badge badge-primary">Explicabilidad</span>
+                    </div>
+                    <div class="result-card-body">
+                        <img src="{{ mapa_calor_img }}" alt="Mapa de Calor" class="result-image">
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Justificación clínica mejorada -->
+                {% if abcd_justificacion or abcd_mensajes %}
+                <div class="result-card justification-card">
+                    <div class="result-card-header">
+                        <h3>Justificación Clínica</h3>
+                        <span class="badge badge-primary">Regla ABCD</span>
+                    </div>
+                    <div class="result-card-body">
+                        {% if abcd_justificacion %}
+                        <div class="justification-summary">
+                            <h4 class="justification-title">Resumen</h4>
+                            <p>{{ abcd_justificacion }}</p>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="justification-details">
+                            <h4 class="justification-title">Análisis Detallado</h4>
+                            <p class="justification-intro">
+                                El diagnóstico se sustenta en el análisis de activación del Mapa de Calor (Grad-CAM) en correlación con los criterios de la Regla ABCD.
+                            </p>
+                            
+                            {% if abcd_mensajes %}
+                            <div class="abcd-results">
+                                <div class="abcd-result-item">
+                                    <span class="abcd-result-letter">A</span>
+                                    <span class="abcd-result-text">{{ abcd_mensajes['A'] }}</span>
+                                </div>
+                                <div class="abcd-result-item">
+                                    <span class="abcd-result-letter">B</span>
+                                    <span class="abcd-result-text">{{ abcd_mensajes['B'] }}</span>
+                                </div>
+                                <div class="abcd-result-item">
+                                    <span class="abcd-result-letter">C</span>
+                                    <span class="abcd-result-text">{{ abcd_mensajes['C'] }}</span>
+                                </div>
+                                <div class="abcd-result-item">
+                                    <span class="abcd-result-letter">D</span>
+                                    <span class="abcd-result-text">{{ abcd_mensajes['D'] }}</span>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="abcd-results">
+                                <div class="abcd-result-item">
+                                    <span class="abcd-result-letter">A</span>
+                                    <span class="abcd-result-text">
+                                        <strong>Asimetría:</strong> {{ (abcd_niveles.asimetria if abcd_niveles else 'N/A')|capitalize }}
+                                    </span>
+                                </div>
+                                <div class="abcd-result-item">
+                                    <span class="abcd-result-letter">B</span>
+                                    <span class="abcd-result-text">
+                                        <strong>Bordes:</strong> {{ (abcd_niveles.bordes if abcd_niveles else 'N/A')|capitalize }}
+                                    </span>
+                                </div>
+                                <div class="abcd-result-item">
+                                    <span class="abcd-result-letter">C</span>
+                                    <span class="abcd-result-text">
+                                        <strong>Color:</strong> {{ (abcd_niveles.color if abcd_niveles else 'N/A')|capitalize }}
+                                    </span>
+                                </div>
+                                <div class="abcd-result-item">
+                                    <span class="abcd-result-letter">D</span>
+                                    <span class="abcd-result-text">
+                                        <strong>Diámetro:</strong> {% if diametro_equivalente_px %}{{ '%.1f'|format(diametro_equivalente_px) }} px{% else %}No disponible{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+/* Estilos base limpios y organizados */
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.page-header h1 {
+    color: #1a1a1a;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.subtitle {
+    color: #666;
+    font-size: 1rem;
+    margin: 0;
+}
+
+/* Área de carga mejorada */
+.upload-area {
+    border: 3px dashed #d1d5db;
+    border-radius: 12px;
+    padding: 1.5rem 2rem;
+    background: #f9fafb;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.upload-area:hover {
+    border-color: #0066cc;
+    background: #f0f7ff;
+}
+
+.upload-area.dragover {
+    border-color: #0066cc;
+    background: #e6f2ff;
+    transform: scale(1.01);
+}
+
+.upload-content {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.upload-icon {
+    color: #0066cc;
+    flex-shrink: 0;
+}
+
+.upload-text {
+    flex: 1;
+    text-align: left;
+}
+
+.upload-area h3 {
+    color: #1a1a1a;
+    font-size: 1.1rem;
+    margin: 0 0 0.25rem 0;
+    font-weight: 600;
+}
+
+.upload-area p {
+    color: #666;
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.file-input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.file-name {
+    display: none;
+    padding: 0.5rem 1rem;
+    background: #0066cc;
+    color: white;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    margin-top: 0.75rem;
+    position: absolute;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    max-width: 80%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.btn-block {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+/* Layout de resultados optimizado */
+.results-section {
+    margin-top: 3rem;
+}
+
+.section-title {
+    color: #1a1a1a;
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #e5e7eb;
+    font-weight: 600;
+}
+
+.results-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: flex-start;
+}
+
+.result-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Cards de resultados profesionales */
+.result-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.result-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.result-card-header {
+    padding: 1rem 1.5rem;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.result-card-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #1a1a1a;
+    font-weight: 600;
+}
+
+.badge {
+    padding: 0.35rem 0.85rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.badge-info {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.badge-primary {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.badge-secondary {
+    background: #e0e7ff;
+    color: #4338ca;
+}
+
+.badge-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.result-card-body {
+    padding: 1.5rem;
+}
+
+/* Imagen de resultado */
+.image-result .result-card-body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #f9fafb;
+    min-height: 400px;
+}
+
+.result-image {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Datos del paciente mejorados */
+.data-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.data-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: #f9fafb;
+    border-radius: 8px;
+    border-left: 3px solid #0066cc;
+}
+
+.data-label {
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.data-value {
+    color: #666;
+}
+
+/* Card de predicciones unificado */
+.predictions-card {
+    border-left: 4px solid #0066cc;
+}
+
+.prediction-section {
+    padding: 1.5rem;
+    background: #f9fafb;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+.prediction-section:last-child {
+    margin-bottom: 0;
+}
+
+.prediction-dedicated {
+    background: #f5f3ff;
+    border: 2px solid #e0e7ff;
+}
+
+.prediction-title {
+    color: #1a1a1a;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.prediction-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.prediction-score {
+    font-size: 2.5rem;
+    font-weight: 700;
+    text-align: center;
+    padding: 1rem;
+    border-radius: 8px;
+    background: white;
+}
+
+.prediction-score.benign {
+    color: #059669;
+    background: #d1fae5;
+}
+
+.prediction-score.malignant {
+    color: #dc2626;
+    background: #fee2e2;
+}
+
+.prediction-label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+}
+
+.label-text {
+    font-size: 0.9rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.label-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    display: inline-block;
+}
+
+.label-value.benign {
+    color: #059669;
+    background: #d1fae5;
+}
+
+.label-value.malignant {
+    color: #dc2626;
+    background: #fee2e2;
+}
+
+/* Sección ABCD mejorada visualmente */
+.abcd-section {
+    margin-bottom: 1.5rem;
+}
+
+.abcd-section:last-child {
+    margin-bottom: 0;
+}
+
+.abcd-title {
+    color: #1a1a1a;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.threshold-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+.threshold-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 8px;
+    border: 2px solid #e5e7eb;
+}
+
+.threshold-letter {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0066cc;
+    color: white;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.threshold-name {
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 0.25rem;
+}
+
+.threshold-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+/* Tarjetas de criterios mejoradas */
+.criterion-card {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid #0066cc;
+}
+
+.criterion-card:last-child {
+    margin-bottom: 0;
+}
+
+.criterion-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.criterion-letter {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0066cc;
+    color: white;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.criterion-name {
+    font-weight: 600;
+    color: #1a1a1a;
+    flex: 1;
+}
+
+.criterion-factor {
+    font-size: 0.85rem;
+    color: #0066cc;
+    font-weight: 600;
+}
+
+.criterion-description {
+    margin: 0;
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+/* Cajas de información mejoradas */
+.info-box {
+    background: #f0f7ff;
+    border: 2px solid #dbeafe;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1.5rem;
+}
+
+.info-box-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    color: #1e40af;
+}
+
+.info-box-header svg {
+    flex-shrink: 0;
+}
+
+.info-box p {
+    margin: 0 0 0.5rem 0;
+    color: #1e40af;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.info-box p:last-child {
+    margin-bottom: 0;
+}
+
+.warning-box {
+    background: #fef3c7;
+    border: 2px solid #fde68a;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.75rem;
+}
+
+.warning-box svg {
+    color: #92400e;
+    flex-shrink: 0;
+}
+
+.warning-box p {
+    margin: 0;
+    color: #92400e;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+/* Justificación clínica mejorada */
+.justification-card {
+    border-left: 4px solid #8b5cf6;
+}
+
+.justification-summary {
+    padding: 1rem;
+    background: #f5f3ff;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+.justification-title {
+    color: #1a1a1a;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem 0;
+}
+
+.justification-summary p {
+    margin: 0;
+    color: #666;
+    line-height: 1.6;
+}
+
+.justification-details {
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+
+.justification-intro {
+    margin: 0 0 1rem 0;
+    color: #666;
+    line-height: 1.6;
+}
+
+.abcd-results {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.abcd-result-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: white;
+    border-radius: 8px;
+    border-left: 3px solid #0066cc;
+}
+
+.abcd-result-letter {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0066cc;
+    color: white;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.abcd-result-text {
+    flex: 1;
+    color: #666;
+    line-height: 1.5;
+}
+
+.abcd-result-text strong {
+    color: #1a1a1a;
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+    .results-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .threshold-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+    }
+    
+    .upload-area {
+        padding: 1.25rem 1.5rem;
+    }
+    
+    .upload-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+    
+    .upload-text {
+        text-align: center;
+    }
+    
+    .prediction-score {
+        font-size: 2rem;
+    }
+    
+    .label-value {
+        font-size: 1.1rem;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('imagen');
+    const fileName = document.getElementById('fileName');
+
+    // Show file name when selected
+    fileInput.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            fileName.textContent = e.target.files[0].name;
+            fileName.style.display = 'inline-block';
+        }
+    });
+
+    // Drag and drop functionality
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        
+        if (e.dataTransfer.files.length > 0) {
+            fileInput.files = e.dataTransfer.files;
+            fileName.textContent = e.dataTransfer.files[0].name;
+            fileName.style.display = 'inline-block';
+        }
+    });
+});
+</script>
+{% endblock %}

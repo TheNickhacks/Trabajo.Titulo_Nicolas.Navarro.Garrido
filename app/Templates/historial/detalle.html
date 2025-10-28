@@ -1,0 +1,252 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Detalle del Diagnóstico{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="page-header">
+        <h1>Detalle de Diagnóstico</h1>
+        <p class="text-muted">Información completa de la consulta</p>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>Datos del Paciente y Diagnóstico</h3>
+        </div>
+        <div class="card-body">
+            <div class="detail-grid">
+                <div>
+                    {% if imagen_reescalada %}
+                        <img src="{{ imagen_reescalada }}" alt="Imagen reescalada" class="detail-image"/>
+                    {% endif %}
+
+                    {% if mapa_calor_img %}
+                        <div class="mt-3">
+                            <img src="{{ mapa_calor_img }}" alt="Mapa de Calor" class="detail-image"/>
+                        </div>
+                    {% endif %}
+                </div>
+                <div>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">ID Consulta</span>
+                            <span class="info-value">{{ historial.id_consulta }}</span>
+                        </div>
+
+                        <div class="info-item">
+                            <span class="info-label">Fecha</span>
+                            <span class="info-value">{{ historial.fecha.strftime('%d/%m/%Y') }}</span>
+                        </div>
+
+                        <div class="info-item">
+                            <span class="info-label">Hora</span>
+                            <span class="info-value">{{ historial.hora.strftime('%H:%M') }}</span>
+                        </div>
+
+                        <div class="info-item full-width">
+                            <span class="info-label">Diagnóstico Principal</span>
+                            <span class="diagnosis-badge {% if 'benigno' in historial.diagnostico.lower() %}diagnosis-benign{% else %}diagnosis-malignant{% endif %}">
+                                {{ historial.diagnostico }}
+                            </span>
+                        </div>
+
+                        <div class="info-item full-width">
+                            <span class="info-label">Diagnóstico Secundario</span>
+                            <span class="diagnosis-badge {% if 'benigno' in historial.diagnostico_2.lower() %}diagnosis-benign{% else %}diagnosis-malignant{% endif %}">
+                                {{ historial.diagnostico_2 }}
+                            </span>
+                        </div>
+
+                        <div class="info-item">
+                            <span class="info-label">Edad Paciente</span>
+                            <span class="info-value">{{ historial.edad_paciente }}</span>
+                        </div>
+
+                        <div class="info-item">
+                            <span class="info-label">Sexo</span>
+                            <span class="info-value">{{ historial.sexo }}</span>
+                        </div>
+
+                        <div class="info-item full-width">
+                            <span class="info-label">Lugar de Lesión</span>
+                            <span class="info-value">{{ historial.lugar_lesion }}</span>
+                        </div>
+
+                        {% if abcd_justificacion %}
+                        <div class="info-item full-width">
+                            <span class="info-label">Explicación</span>
+                            <span class="info-value">{{ abcd_justificacion }}</span>
+                        </div>
+                        {% elif historial.explicacion %}
+                        <div class="info-item full-width">
+                            <span class="info-label">Explicación</span>
+                            <span class="info-value">{{ historial.explicacion }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mt-4">
+                        <a href="{{ url_for('historial.historial') }}" class="btn btn-secondary">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="19" y1="12" x2="5" y2="12"></line>
+                                <polyline points="12 19 5 12 12 5"></polyline>
+                            </svg>
+                            Volver al Historial
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tarjeta de Explicabilidad Clínica (Regla ABCD) -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3>Explicabilidad Clínica (Regla ABCD)</h3>
+        </div>
+        <div class="card-body">
+            {% if abcd_justificacion %}
+                <p class="justificacion-text">{{ abcd_justificacion }}</p>
+            {% endif %}
+
+            {% if abcd_mensajes %}
+            <div class="abcd-grid">
+                <div class="abcd-item">
+                    <div class="abcd-head">
+                        <span class="abcd-label">A - Asimetría</span>
+                        {% if abcd_niveles and abcd_niveles['asimetria'] %}
+                        <span class="level-badge level-{{ abcd_niveles['asimetria'] }}">{{ abcd_niveles['asimetria']|capitalize }}</span>
+                        {% endif %}
+                    </div>
+                    <p class="abcd-msg">{{ abcd_mensajes['A'] }}</p>
+                </div>
+                <div class="abcd-item">
+                    <div class="abcd-head">
+                        <span class="abcd-label">B - Bordes</span>
+                        {% if abcd_niveles and abcd_niveles['bordes'] %}
+                        <span class="level-badge level-{{ abcd_niveles['bordes'] }}">{{ abcd_niveles['bordes']|capitalize }}</span>
+                        {% endif %}
+                    </div>
+                    <p class="abcd-msg">{{ abcd_mensajes['B'] }}</p>
+                </div>
+                <div class="abcd-item">
+                    <div class="abcd-head">
+                        <span class="abcd-label">C - Color</span>
+                        {% if abcd_niveles and abcd_niveles['color'] %}
+                        <span class="level-badge level-{{ abcd_niveles['color'] }}">{{ abcd_niveles['color']|capitalize }}</span>
+                        {% endif %}
+                    </div>
+                    <p class="abcd-msg">{{ abcd_mensajes['C'] }}</p>
+                </div>
+                <div class="abcd-item">
+                    <div class="abcd-head">
+                        <span class="abcd-label">D - Diámetro</span>
+                        <!-- Nivel no aplica aquí; se muestra mensaje con DEP -->
+                    </div>
+                    <p class="abcd-msg">{{ abcd_mensajes['D'] }}</p>
+                </div>
+            </div>
+            {% else %}
+                <div class="alert alert-info">
+                    No hay información ABCD disponible para este registro.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.page-header {
+    margin-bottom: 2rem;
+}
+.page-header h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 0.5rem;
+}
+.page-header .text-muted {
+    color: #666;
+    font-size: 0.95rem;
+}
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+@media (max-width: 768px) {
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.card-header h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0;
+}
+.detail-image {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+}
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.info-item.full-width {
+    grid-column: 1 / -1;
+}
+.info-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.info-value {
+    font-size: 1rem;
+    color: #1a1a1a;
+}
+.diagnosis-badge {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+.diagnosis-benign {
+    background-color: #d4edda;
+    color: #155724;
+}
+.diagnosis-malignant {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+.abcd-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+}
+@media (max-width: 768px) {
+    .abcd-grid { grid-template-columns: 1fr; }
+}
+.abcd-item { border: 1px solid #e9ecef; border-radius: 8px; padding: 1rem; }
+.abcd-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+.abcd-label { font-weight: 600; color: #1a1a1a; }
+.abcd-msg { color: #333; font-size: 0.95rem; }
+.level-badge { padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.75rem; }
+.level-alta { background: #fdecea; color: #b42318; }
+.level-moderada { background: #fff4e5; color: #b76e00; }
+.level-baja { background: #e7f5ff; color: #0b62a4; }
+.justificacion-text { font-size: 0.95rem; color: #1a1a1a; margin-bottom: 1rem; }
+.alert-info { display: flex; align-items: center; gap: 0.75rem; padding: 1rem; background-color: #d1ecf1; border: 1px solid #bee5eb; border-radius: 8px; color: #0c5460; }
+</style>
+{% endblock %}
