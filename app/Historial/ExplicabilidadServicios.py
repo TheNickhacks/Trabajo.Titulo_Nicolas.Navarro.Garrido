@@ -52,7 +52,12 @@ def generar_mapa_calor_normalizado(
     if model_path is None:
         raise FileNotFoundError(f"Modelo no encontrado: {nombre_modelo} en {model_dir} o {base_path}")
 
-    model = keras.models.load_model(model_path)
+    # Cargar modelo sin compilar para evitar errores con funciones de pérdida personalizadas
+    try:
+        model = keras.models.load_model(model_path, compile=False)
+    except Exception as e:
+        print(f"Advertencia al cargar modelo: {e}")
+        model = keras.models.load_model(model_path)
 
     # Inferencia inicial para obtener clase objetivo
     input_tensor = tf.convert_to_tensor(np.expand_dims(img, axis=0), dtype=tf.float32)

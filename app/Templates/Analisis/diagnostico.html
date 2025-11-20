@@ -272,13 +272,11 @@
                     <div class="result-card-body">
                         
                         <!-- Predicción Principal -->
-                        {% if prediccion_principal is not none %}
+                        {% if prediccion_principal is not none and diagnostico_principal_label %}
                         <div class="prediction-section">
                             <h4 class="prediction-title">Predicción Principal</h4>
-                            {% set labels = ['Benigno', 'Maligno'] %}
                             {% set primary_score = prediccion_principal * 100 %}
-                            {% set primary_label_index = 1 if prediccion_principal > 0.5 else 0 %}
-                            {% set primary_class = 'malignant' if primary_label_index == 1 else 'benign' %}
+                            {% set primary_class = 'malignant' if diagnostico_principal_label == 'Maligna' else 'benign' %}
                             
                             <div class="prediction-content">
                                 <div class="prediction-score {{ primary_class }}">
@@ -286,28 +284,33 @@
                                 </div>
                                 <div class="prediction-label">
                                     <span class="label-text">Diagnóstico:</span>
-                                    <span class="label-value {{ primary_class }}">{{ labels[primary_label_index] }}</span>
+                                    <span class="label-value {{ primary_class }}">{{ diagnostico_principal_label }}</span>
                                 </div>
                             </div>
                         </div>
                         {% endif %}
 
                         <!-- Predicción Dedicada -->
-                        {% if prediccion_secundaria is not none %}
+                        {% if prediccion_secundaria is not none and diagnostico_secundario_label %}
                         <div class="prediction-section prediction-dedicated">
                             <h4 class="prediction-title">Predicción Dedicada</h4>
-                            {% set labels = ['Benigno', 'Maligno'] %}
                             {% set secondary_score = prediccion_secundaria * 100 %}
-                            {% set secondary_label_index = 1 if prediccion_secundaria > 0.5 else 0 %}
-                            {% set secondary_class = 'malignant' if secondary_label_index == 1 else 'benign' %}
+                            {# Determinar clase CSS basado en si es una etiqueta maligna o no #}
+                            {% if diagnostico_secundario_label == 'Maligna' %}
+                                {% set secondary_class = 'malignant' %}
+                            {% elif diagnostico_secundario_label in ['Dermatofibroma', 'Nevus', 'Scar', 'Seborrheic Keratosis', 'Solar lentigo', 'Benigna'] %}
+                                {% set secondary_class = 'benign' %}
+                            {% else %}
+                                {% set secondary_class = 'neutral' %}
+                            {% endif %}
                             
                             <div class="prediction-content">
                                 <div class="prediction-score {{ secondary_class }}">
                                     {{ '%.2f' % secondary_score }}%
                                 </div>
                                 <div class="prediction-label">
-                                    <span class="label-text">Diagnóstico:</span>
-                                    <span class="label-value {{ secondary_class }}">{{ labels[secondary_label_index] }}</span>
+                                    <span class="label-text">Diagnóstico Específico:</span>
+                                    <span class="label-value {{ secondary_class }}">{{ diagnostico_secundario_label }}</span>
                                 </div>
                             </div>
                         </div>
@@ -705,6 +708,11 @@
     background: #fee2e2;
 }
 
+.prediction-score.neutral {
+    color: #0066cc;
+    background: #dbeafe;
+}
+
 .prediction-label {
     display: flex;
     flex-direction: column;
@@ -734,6 +742,11 @@
 .label-value.malignant {
     color: #dc2626;
     background: #fee2e2;
+}
+
+.label-value.neutral {
+    color: #0066cc;
+    background: #dbeafe;
 }
 
 /* Sección ABCD mejorada visualmente */

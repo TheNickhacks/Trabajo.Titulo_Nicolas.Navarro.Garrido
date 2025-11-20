@@ -1,8 +1,6 @@
 import os
 from PIL import Image
 import numpy as np
-import tensorflow as tf
-from tensorflow.keras.models import load_model
 
 
 def obtener_modelos_h5(ruta_base):
@@ -38,6 +36,8 @@ def cargar_y_reescalar_imagen(imagen_bytes):
 
 def generar_prediccion(imagen_np, nombre_modelo_primario, base_path):
     try:
+        # Importar aquí para evitar dependencia de TensorFlow al importar el módulo completo
+        from tensorflow.keras.models import load_model
         # Cargar el primer modelo
         ruta_modelo_primario = os.path.join(base_path, 'modelos_ia', nombre_modelo_primario)
         modelo_primario = load_model(ruta_modelo_primario)
@@ -54,14 +54,21 @@ def generar_prediccion(imagen_np, nombre_modelo_primario, base_path):
         es_maligno = prediccion_primaria[0][1] > prediccion_primaria[0][0] and prediccion_primaria[0][1] > 0.4
 
         # Cargar el segundo modelo según el diagnóstico
-        nombre_modelo_secundario = "Modelo_2.h5" if es_maligno else "Modelo_1_CapaPlana.h5"
+        nombre_modelo_secundario = "Modelo_2.h5" if es_maligno else "Modelo_2_Benigno.h5"
         
         # Verificar si el modelo secundario existe
         ruta_modelo_secundario = os.path.join(base_path, 'modelos_ia', nombre_modelo_secundario)
         if not os.path.exists(ruta_modelo_secundario):
-            return prediccion_primaria # Retorna la predicción primaria si el modelo secundario no existe
+            print(f"Advertencia: No se encontró el modelo secundario {nombre_modelo_secundario}")
+            return prediccion_primaria, None  # Retorna solo predicción primaria
 
-        modelo_secundario = load_model(ruta_modelo_secundario)
+        # Cargar modelo secundario sin compilar (para evitar errores con funciones de pérdida personalizadas)
+        try:
+            modelo_secundario = load_model(ruta_modelo_secundario, compile=False)
+        except Exception as e:
+            print(f"Error al cargar modelo secundario: {e}")
+            # Intentar con custom_objects si el primer intento falla
+            modelo_secundario = load_model(ruta_modelo_secundario)
 
         # Realizar la predicción final con el modelo secundario
         prediccion_final = modelo_secundario.predict(imagen_procesada)
@@ -83,8 +90,18 @@ def generar_prediccion(imagen_np, nombre_modelo_primario, base_path):
 
 def generar_grad_cam(imagen_np, nombre_modelo, base_path, target_layer_name=None):
     try:
+        # Importar aquí para evitar dependencia de TensorFlow al importar el módulo completo
+        import tensorflow as tf
+        from tensorflow.keras.models import load_model
+        from tensorflow.keras.layers import Conv2D
         ruta_modelo = os.path.join(base_path, 'modelos_ia', nombre_modelo)
-        model = load_model(ruta_modelo)
+        
+        # Cargar modelo sin compilar para evitar errores con funciones de pérdida personalizadas
+        try:
+            model = load_model(ruta_modelo, compile=False)
+        except Exception as e:
+            print(f"Advertencia al cargar modelo para Grad-CAM: {e}")
+            model = load_model(ruta_modelo)
 
         # Asegurar base en RGB para overlay
         base_img = imagen_np
@@ -106,7 +123,6 @@ def generar_grad_cam(imagen_np, nombre_modelo, base_path, target_layer_name=None
         # Identificar última capa conv
         last_conv = None
         last_conv_name = None
-        from tensorflow.keras.layers import Conv2D
         if target_layer_name:
             try:
                 last_conv = model.get_layer(target_layer_name)
@@ -190,10 +206,23 @@ def generar_grad_cam(imagen_np, nombre_modelo, base_path, target_layer_name=None
 
         heatmap_color = jet_colormap(heatmap_arr)
 
-        # Atenuar la imagen base para que el heatmap sea más prominente
-        base_dimmed = base_img.astype(np.float32) * 0.4  # Atenuar imagen base
-        alpha = 0.7  # Heatmap prominente pero no tanto como antes
-        overlay = np.clip(alpha * heatmap_color + (1 - alpha) * base_dimmed, 0, 255).astype(np.uint8)
+        # Mejorar visibilidad: imagen base más visible, heatmap solo en zonas importantes
+        base_img_float = base_img.astype(np.float32)
+        
+        # Crear máscara de intensidad: solo áreas con activación alta son visibles
+        # Valores bajos (azul) se vuelven transparentes
+        intensity_mask = heatmap_arr ** 2  # Elevar al cuadrado para enfatizar valores altos
+        intensity_mask = np.stack([intensity_mask] * 3, axis=-1)  # Convertir a 3 canales
+        
+        # Mezcla adaptativa: imagen base visible, heatmap solo en zonas importantes
+        # En zonas frías (azul): 90% imagen original, 10% heatmap
+        # En zonas calientes (rojo): 40% imagen original, 60% heatmap
+        alpha_dynamic = 0.1 + (intensity_mask * 0.5)  # Varía de 0.1 a 0.6
+        
+        overlay = np.clip(
+            (1 - alpha_dynamic) * base_img_float + alpha_dynamic * heatmap_color,
+            0, 255
+        ).astype(np.uint8)
 
         overlay_pil = Image.fromarray(overlay)
         return overlay_pil

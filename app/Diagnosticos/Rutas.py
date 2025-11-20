@@ -54,32 +54,55 @@ def nuevo_analisis():
                         prediccion_principal_raw, prediccion_secundaria_raw = generar_prediccion(imagen_np, nombre_modelo_seleccionado, os.path.dirname(__file__))
 
                         # Lógica para la predicción principal
-                        diagnostico_principal_label = "" # Inicializar la etiqueta
+                        # prediccion_principal_raw[0] contiene [prob_benigna, prob_maligna]
+                        diagnostico_principal_label = ""
+                        prediccion_principal = 0.0
+                        
                         if len(prediccion_principal_raw) > 0 and len(prediccion_principal_raw[0]) > 1:
-                            if prediccion_principal_raw[0][1] > prediccion_principal_raw[0][0] and prediccion_principal_raw[0][1] > 0.4:
-                                prediccion_principal = float(prediccion_principal_raw[0][1]) # Benigna
+                            prob_benigna = float(prediccion_principal_raw[0][0])
+                            prob_maligna = float(prediccion_principal_raw[0][1])
+                            
+                            # Determinar diagnóstico según probabilidad mayor
+                            if prob_maligna > prob_benigna and prob_maligna > 0.4:
+                                prediccion_principal = prob_maligna
                                 diagnostico_principal_label = "Maligna"
                             else:
-                                prediccion_principal = float(prediccion_principal_raw[0][0]) # Maligna
+                                prediccion_principal = prob_benigna
                                 diagnostico_principal_label = "Benigna"
 
 
-                        # Lógica para la predicción secundaria: valor mayor de todos los valores
-                        diagnostico_secundario_label = "" # Inicializar la etiqueta
+                        # Lógica para la predicción secundaria
+                        diagnostico_secundario_label = ""
+                        prediccion_secundaria = 0.0
+                        
                         if prediccion_secundaria_raw is not None and len(prediccion_secundaria_raw) > 0 and len(prediccion_secundaria_raw[0]) > 0:
-                            # Asumiendo que prediccion_secundaria_raw es una lista de listas
-                            max_prob = max(prediccion_secundaria_raw[0])
-                            prediccion_secundaria = float(max_prob)
-                            # Aquí necesitas la lista de etiquetas en el orden correcto
-                            # La etiqueta secundaria será 'Maligna' si el primer valor de prediccion_principal_raw es mayor, 'Benigna' en caso contrario.
-                            # Asumiendo que prediccion_principal_raw[0] contiene las probabilidades para [Benigna, Maligna]
-                            if prediccion_principal_raw[0][0] > prediccion_principal_raw[0][1]:
-                                diagnostico_secundario_label = "Benigna"
+                            # Definir etiquetas según el diagnóstico principal
+                            if diagnostico_principal_label == "Benigna":
+                                # Modelo benigno con 5 clases específicas
+                                etiquetas_secundarias = [
+                                    "Dermatofibroma",
+                                    "Nevus", 
+                                    "Scar",
+                                    "Seborrheic Keratosis",
+                                    "Solar lentigo"
+                                ]
                             else:
-                                diagnostico_secundario_label = "Maligna"
+                                # Modelo maligno con 2 clases
+                                etiquetas_secundarias = ["Benigna", "Maligna"]
+                            
+                            # Obtener el índice con mayor probabilidad
+                            probabilidades = prediccion_secundaria_raw[0]
+                            idx_max = int(np.argmax(probabilidades))
+                            prediccion_secundaria = float(probabilidades[idx_max])
+                            
+                            # Asignar la etiqueta correspondiente
+                            if idx_max < len(etiquetas_secundarias):
+                                diagnostico_secundario_label = etiquetas_secundarias[idx_max]
+                            else:
+                                diagnostico_secundario_label = f"Clase {idx_max}"
                         else:
-                            prediccion_secundaria = 0.0 # Default value in case of error
-                            diagnostico_secundario_label = "Desconocido" # Etiqueta por defecto
+                            prediccion_secundaria = 0.0
+                            diagnostico_secundario_label = "Desconocido"
 
                     except Exception as e:
                         import traceback
