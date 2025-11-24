@@ -86,15 +86,22 @@ def nuevo_analisis():
                                     "Seborrheic Keratosis",
                                     "Solar lentigo"
                                 ]
+                            elif diagnostico_principal_label == "Maligna":
+                                # Modelo maligno con 4 clases específicas
+                                etiquetas_secundarias = [
+                                    "Basal Cell Carcinoma",
+                                    "Melanoma Metastasis",
+                                    "Melanoma, NOS",
+                                    "Squamous Cell Carninoma, NOS"
+                                ]
                             else:
-                                # Modelo maligno con 2 clases
-                                etiquetas_secundarias = ["Benigna", "Maligna"]
-                            
+                                etiquetas_secundarias = [f"Clase {i}" for i in range(len(prediccion_secundaria_raw[0]))]
+
                             # Obtener el índice con mayor probabilidad
                             probabilidades = prediccion_secundaria_raw[0]
                             idx_max = int(np.argmax(probabilidades))
                             prediccion_secundaria = float(probabilidades[idx_max])
-                            
+
                             # Asignar la etiqueta correspondiente
                             if idx_max < len(etiquetas_secundarias):
                                 diagnostico_secundario_label = etiquetas_secundarias[idx_max]

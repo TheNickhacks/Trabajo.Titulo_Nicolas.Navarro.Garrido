@@ -54,8 +54,11 @@ def generar_prediccion(imagen_np, nombre_modelo_primario, base_path):
         es_maligno = prediccion_primaria[0][1] > prediccion_primaria[0][0] and prediccion_primaria[0][1] > 0.4
 
         # Cargar el segundo modelo según el diagnóstico
-        nombre_modelo_secundario = "Modelo_2.h5" if es_maligno else "Modelo_2_Benigno.h5"
-        
+        if es_maligno:
+            nombre_modelo_secundario = "Modelo_2_Maligno.h5"
+        else:
+            nombre_modelo_secundario = "Modelo_2_Benigno.h5"
+
         # Verificar si el modelo secundario existe
         ruta_modelo_secundario = os.path.join(base_path, 'modelos_ia', nombre_modelo_secundario)
         if not os.path.exists(ruta_modelo_secundario):
